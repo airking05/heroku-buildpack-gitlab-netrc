@@ -1,0 +1,57 @@
+#!/usr/bin/env ruby
+
+require 'erb'
+require 'fileutils'
+require "#{File.join(File.dirname(__FILE__), '..', 'lib', 'github')}"
+
+build_dir    = ARGV[0]
+cache_dir    = ARGV[1]
+env_dir      = ARGV[2]
+
+gitlab_token = if env_dir
+                 token_file = File.join(env_dir, 'GITLAB_AUTH_TOKEN')
+                 File.open(token_file, &:read) if File.exist? token_file
+               else
+                 # Legacy user-env-compile support
+                 # TODO: Remove once deprecation is complete
+                 ENV['GITLAB_AUTH_TOKEN']
+               end
+
+if github_token.nil?
+  puts "       !!!! GITLAB_AUTH_TOKEN not set"
+  puts "       !!!!   Try `heroku config:add GITLAB_AUTH_TOKEN=<my token>`"
+  exit 1
+end
+
+netrc_template = File.read "#{File.join(File.dirname(__FILE__), '..', 'support', 'netrc')}"
+
+##
+# Supply `curl` on the BUILD machine (not in slug) with token to access private Github repos
+File.open "#{ENV['HOME']}/.netrc", "w+", 0600 do |f|
+  # The ../support/netrc template relies on the `github_token` variable above
+  f.puts ERB.new(netrc_template).result
+end
+
+##
+# Tell `curl` on the BUILD machine (not in slug) to use ~/.netrc
+File.open "#{ENV['HOME']}/.curlrc", "w+", 0600 do |f|
+  f.puts "--netrc-optional"
+end
+
+if valid_login? github_token
+  puts "       Generated .netrc & .curlrc files (available only at build-time)"
+
+  ##
+  # Remove $GITHUB_AUTH_TOKEN from runtime environment at slug boot time.
+  FileUtils.mkdir_p "#{build_dir}/.profile.d"
+  File.open "#{build_dir}/.profile.d/netrc.sh", "w+", 0600 do |f|
+    f.puts "unset GITLAB_AUTH_TOKEN"
+  end
+
+  ##
+  # Print out user information
+  puts user_block(gitlab_token)
+else
+  puts "       !!!! No valid Github user found with GITLAB_AUTH_TOKEN: '#{github_token}'"
+  exit 1
+end

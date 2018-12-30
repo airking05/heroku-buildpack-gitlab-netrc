@@ -1,0 +1,1 @@
+machine gitlab.com login <%= gitlab_token_username %> password <%= gitlab_token_password %>
