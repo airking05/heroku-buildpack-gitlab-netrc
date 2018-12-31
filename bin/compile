@@ -8,7 +8,7 @@ build_dir    = ARGV[0]
 cache_dir    = ARGV[1]
 env_dir      = ARGV[2]
 
-gitlab_token = if env_dir
+gitlab_token_password = if env_dir
                  token_file = File.join(env_dir, 'GITLAB_AUTH_TOKEN')
                  File.open(token_file, &:read) if File.exist? token_file
                else
@@ -17,13 +17,13 @@ gitlab_token = if env_dir
                  ENV['GITLAB_AUTH_TOKEN']
                end
 
-if gitlab_token.nil?
+if gitlab_token_password.nil?
   puts "       !!!! GITLAB_AUTH_TOKEN not set"
   puts "       !!!!   Try `heroku config:add GITLAB_AUTH_TOKEN=<my token>`"
   exit 1
 end
 
-gitlab_token_username = gitlab_user_login(gitlab_token)
+gitlab_token_username = gitlab_user_login(gitlab_token_password)
 
 if gitlab_token_username.nil?
   puts "       !!!! GITLAB_AUTH_TOKEN is not valid"
@@ -35,7 +35,7 @@ netrc_template = File.read "#{File.join(File.dirname(__FILE__), '..', 'support',
 ##
 # Supply `curl` on the BUILD machine (not in slug) with token to access private gitlab repos
 File.open "#{ENV['HOME']}/.netrc", "w+", 0600 do |f|
-  # The ../support/netrc template relies on the `gitlab_token` variable above
+  # The ../support/netrc template relies on the `gitlab_token_password` variable above
   f.puts ERB.new(netrc_template).result
 end
 
@@ -45,7 +45,7 @@ File.open "#{ENV['HOME']}/.curlrc", "w+", 0600 do |f|
   f.puts "--netrc-optional"
 end
 
-if valid_login? gitlab_token
+if valid_login? gitlab_token_password
   puts "       Generated .netrc & .curlrc files (available only at build-time)"
 
   ##
@@ -57,8 +57,8 @@ if valid_login? gitlab_token
 
   ##
   # Print out user information
-  puts user_block(gitlab_token)
+  puts user_block(gitlab_token_password)
 else
-  puts "       !!!! No valid gitlab user found with GITLAB_AUTH_TOKEN: '#{gitlab_token}'"
+  puts "       !!!! No valid gitlab user found with GITLAB_AUTH_TOKEN: '#{gitlab_token_password}'"
   exit 1
 end
