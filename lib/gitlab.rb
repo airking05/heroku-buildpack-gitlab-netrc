@@ -11,6 +11,7 @@ end
 def gitlab_user_login token
   json = `curl -H "Private-Token: #{token}" -s https://gitlab.com/api/v4/user` rescue "{}"
   user = JSON.parse json rescue {}
+  print user
   user["username"] || "error"
 end
 
