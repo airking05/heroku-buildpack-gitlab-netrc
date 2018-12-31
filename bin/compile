@@ -23,6 +23,13 @@ if gitlab_token.nil?
   exit 1
 end
 
+gitlab_token_username = gitlab_user_login(gitlab_token)
+
+if gitlab_token_username.nil?
+  puts "       !!!! GITLAB_AUTH_TOKEN is not valid"
+  exit 1
+end
+
 netrc_template = File.read "#{File.join(File.dirname(__FILE__), '..', 'support', 'netrc')}"
 
 ##
